@@ -11,16 +11,15 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
 
-        // Wait for user input
         stdin.read_line(&mut input).unwrap();
-        let input = input.trim();
+        let split_input = input.trim().split_whitespace().collect::<Vec<&str>>();
+        let command = split_input[0];
+        let args = split_input[1..].to_vec();
 
-        match input {
-            "exit 0" => exit(0),
-            &_ => {
-                println!("{}: command not found", input);
-            }
+        match command {
+            "echo"  => println!("{}", args.join(" ")),
+            "exit"  => exit(args[0].parse().unwrap()),
+            _       => println!("{}: command not found", command)
         }
-
     }
 }
