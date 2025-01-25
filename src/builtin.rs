@@ -1,5 +1,8 @@
+use pathsearch::find_executable_in_path;
 use std::process::exit;
 use crate::builtin::Builtin::*;
+
+const BUILTINS: [&str; 3] = ["exit", "echo", "type"];
 
 pub enum Builtin {
     Echo,
@@ -23,10 +26,17 @@ impl Builtin {
             Echo => println!("{}", args.join(" ")),
             Exit => exit(args[0].parse().unwrap()),
             NotFound(command) => println!("{}: command not found", command),
-            Type => match args[0] {
-                "exit" | "echo" | "type" => println!("{} is a shell builtin", args[0]),
-                _ => println!("{}: not found", args[0]),
-            },
+            Type => self.handle_type(args[0]),
+        }
+    }
+
+    fn handle_type(&self, command: &str) {
+        if BUILTINS.contains(&command) {
+            println!("{command} is a shell builtin");
+        } else if let Some(executable) = find_executable_in_path(command) {
+            println!("{} is {}", command, executable.display());
+        } else {
+            println!("{command}: not found");
         }
     }
 }
