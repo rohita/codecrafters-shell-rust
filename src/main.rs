@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
+use std::process::exit;
 
 fn main() {
     let stdin = io::stdin();
@@ -15,6 +16,7 @@ fn main() {
         let input = input.trim();
 
         match input {
+            "exit 0" => exit(0),
             &_ => {
                 println!("{}: command not found", input);
             }
