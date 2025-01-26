@@ -41,7 +41,8 @@ impl Builtin {
             },
             Pwd => env::current_dir()?.display().to_string(),
             Cd => {
-                let path = Path::new(&args[0]);
+                let dir = args[0].replace("~", env::var("HOME")?.as_str());
+                let path = Path::new(&dir);
                 match env::set_current_dir(path) {
                     Ok(()) => String::new(),
                     Err(_) => format!("cd: {}: No such file or directory", args[0])
