@@ -1,42 +1,41 @@
+use crate::builtin::Builtin::*;
+use anyhow::Result;
 use pathsearch::find_executable_in_path;
 use std::process::exit;
-use crate::builtin::Builtin::*;
-
-const BUILTINS: [&str; 3] = ["exit", "echo", "type"];
 
 pub enum Builtin {
     Echo,
     Exit,
     Type,
-    NotFound(String),
 }
 
 impl Builtin {
-    pub fn from(command: &str) -> Builtin {
-        match command {
-            "echo" => Echo,
-            "exit" => Exit,
-            "type" => Type,
-            _ => NotFound(command.to_string()),
+    pub fn is_builtin(name: &str) -> Option<Builtin> {
+        match name {
+        "echo" => Some(Echo),
+        "exit" => Some(Exit),
+        "type" => Some(Type),
+        _ => None,
         }
     }
 
-    pub fn handle(&self, args: Vec<&str>) {
-        match self {
-            Echo => println!("{}", args.join(" ")),
-            Exit => exit(args[0].parse().unwrap()),
-            NotFound(command) => println!("{}: command not found", command),
-            Type => self.handle_type(args[0]),
-        }
-    }
+    pub fn exec(&self, args: &Vec<String>) -> Result<Vec<u8>> {
+        let mut return_val = match self {
+            Echo => args.join(" "),
+            Exit => exit(args[0].parse()?),
+            Type => {
+                let type_arg = &args[0];
+                if Self::is_builtin(type_arg).is_some() {
+                    format!("{type_arg} is a shell builtin")
+                } else if let Some(executable) = find_executable_in_path(type_arg) {
+                    format!("{} is {}", type_arg, executable.display())
+                } else {
+                    format!("{type_arg}: not found")
+                }
+            },
+        };
 
-    fn handle_type(&self, command: &str) {
-        if BUILTINS.contains(&command) {
-            println!("{command} is a shell builtin");
-        } else if let Some(executable) = find_executable_in_path(command) {
-            println!("{} is {}", command, executable.display());
-        } else {
-            println!("{command}: not found");
-        }
+        return_val.push_str("\n");
+        Ok(return_val.into_bytes())
     }
 }
