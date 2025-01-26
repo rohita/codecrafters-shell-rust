@@ -8,6 +8,7 @@ enum State {
     Unquoted,
     SingleQuoted,
     DoubleQuoted,
+    DoubleQuotedBackslash,
 }
 
 impl Parser {
@@ -53,7 +54,20 @@ impl Parser {
                 DoubleQuoted => match next {
                     None => panic!("parse error"),
                     Some('\"') => Unquoted,
+                    Some('\\') => DoubleQuotedBackslash,
                     Some(c) => {
+                        word.push(c);
+                        DoubleQuoted
+                    }
+                },
+                DoubleQuotedBackslash => match next {
+                    None => panic!("parse error"),
+                    Some(c @ '$') | Some(c @ '\n') | Some(c @ '"') | Some(c @ '\\') => {
+                        word.push(c);
+                        DoubleQuoted
+                    }
+                    Some(c) => {
+                        word.push('\\');
                         word.push(c);
                         DoubleQuoted
                     }
