@@ -1,6 +1,9 @@
+use std::mem::replace;
+
 pub struct Parser;
 
 enum State {
+    Backslash,
     Delimiter,
     Unquoted,
     SingleQuoted,
@@ -17,10 +20,22 @@ impl Parser {
         loop {
             let next = chars.next();
             state = match state {
+                Backslash => match next {
+                    None => {
+                        word.push('\\');
+                        words.push(replace(&mut word, String::new()));
+                        break;
+                    }
+                    Some(c) => {
+                        word.push(c);
+                        Unquoted
+                    }
+                },
                 Delimiter => match next {
                     None => break,
                     Some('\'') => SingleQuoted,
                     Some('\"') => DoubleQuoted,
+                    Some('\\') => Backslash,
                     Some(' ') => Delimiter,
                     Some(c) => {
                         word.push(c);
@@ -45,13 +60,14 @@ impl Parser {
                 },
                 Unquoted => match next {
                     None => {
-                        words.push(std::mem::replace(&mut word, String::new()));
+                        words.push(replace(&mut word, String::new()));
                         break;
                     }
                     Some('\'') => SingleQuoted,
                     Some('\"') => DoubleQuoted,
+                    Some('\\') => Backslash,
                     Some(' ') => {
-                        words.push(std::mem::replace(&mut word, String::new()));
+                        words.push(replace(&mut word, String::new()));
                         Delimiter
                     }
                     Some(c) => {
