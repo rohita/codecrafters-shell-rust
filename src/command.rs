@@ -1,6 +1,7 @@
 use crate::builtin::Builtin;
 use anyhow::Result;
 use pathsearch::find_executable_in_path;
+use crate::parser::Parser;
 
 pub struct Command {
     pub name: String,
@@ -9,15 +10,12 @@ pub struct Command {
 
 impl Command {
     pub fn new(input: String) -> Self {
-        let split_input: Vec<_> = input
-            .trim()
-            .split_whitespace()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>();
+        let input = input.trim();
+        let (cmd, rest) = input.split_once(" ").unwrap_or((input, ""));
 
         Self {
-            name: split_input[0].clone(),
-            args: split_input[1..].to_vec(),
+            name: cmd.to_string(),
+            args: Parser::parse(rest),
         }
     }
 
