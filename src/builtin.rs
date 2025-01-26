@@ -1,4 +1,5 @@
 use std::env;
+use std::path::Path;
 use crate::builtin::Builtin::*;
 use anyhow::Result;
 use pathsearch::find_executable_in_path;
@@ -9,6 +10,7 @@ pub enum Builtin {
     Exit,
     Type,
     Pwd,
+    Cd,
 }
 
 impl Builtin {
@@ -18,6 +20,7 @@ impl Builtin {
             "exit" => Some(Exit),
             "type" => Some(Type),
             "pwd" => Some(Pwd),
+            "cd" => Some(Cd),
             _ => None,
         }
     }
@@ -37,9 +40,19 @@ impl Builtin {
                 }
             },
             Pwd => env::current_dir()?.display().to_string(),
+            Cd => {
+                let path = Path::new(&args[0]);
+                match env::set_current_dir(path) {
+                    Ok(()) => String::new(),
+                    Err(_) => format!("cd: {}: No such file or directory", args[0])
+                }
+            },
         };
 
-        return_val.push_str("\n");
+        if !return_val.is_empty() {
+            return_val.push_str("\n");
+        }
+
         Ok(return_val.into_bytes())
     }
 }
