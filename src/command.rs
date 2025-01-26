@@ -1,7 +1,7 @@
 use crate::builtin::Builtin;
 use anyhow::Result;
 use pathsearch::find_executable_in_path;
-use crate::parser::Parser;
+use std::process::Output;
 
 pub struct Command {
     pub name: String,
@@ -9,28 +9,28 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new(input: String) -> Self {
-        let parsed_input = Parser::parse(&input.trim());
-
+    pub fn new(name: String, args: Vec<String>) -> Self {
         Self {
-            name: parsed_input[0].clone(),
-            args: parsed_input[1..].to_vec(),
+            name,
+            args,
         }
     }
 
-    pub fn exec(&mut self) -> Result<Vec<u8>> {
+    pub fn exec(&mut self) -> Result<Output> {
         if let Some(builtin) = Builtin::is_builtin(&self.name) {
-            return builtin.exec(&self.args)
+            let output = Output { status: Default::default(), stdout: builtin.exec(&self.args)?, stderr: vec![] };
+            return Ok(output)
         }
 
         if find_executable_in_path(&self.name).is_some() {
             let proc = std::process::Command::new(&self.name)
                 .args(&self.args)
                 .output()?;
-            return Ok(proc.stdout)
+            return Ok(proc)
         }
 
         let not_found = format!("{}: command not found\n", self.name).into_bytes();
-        Ok(not_found)
+        let output = Output { status: Default::default(), stdout: not_found, stderr: vec![] };
+        Ok(output)
     }
 }
