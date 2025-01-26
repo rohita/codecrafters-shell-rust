@@ -1,3 +1,4 @@
+use std::env;
 use crate::builtin::Builtin::*;
 use anyhow::Result;
 use pathsearch::find_executable_in_path;
@@ -7,15 +8,17 @@ pub enum Builtin {
     Echo,
     Exit,
     Type,
+    Pwd,
 }
 
 impl Builtin {
     pub fn is_builtin(name: &str) -> Option<Builtin> {
         match name {
-        "echo" => Some(Echo),
-        "exit" => Some(Exit),
-        "type" => Some(Type),
-        _ => None,
+            "echo" => Some(Echo),
+            "exit" => Some(Exit),
+            "type" => Some(Type),
+            "pwd" => Some(Pwd),
+            _ => None,
         }
     }
 
@@ -33,6 +36,7 @@ impl Builtin {
                     format!("{type_arg}: not found")
                 }
             },
+            Pwd => env::current_dir()?.display().to_string(),
         };
 
         return_val.push_str("\n");
