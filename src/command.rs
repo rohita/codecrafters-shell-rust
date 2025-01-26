@@ -10,12 +10,11 @@ pub struct Command {
 
 impl Command {
     pub fn new(input: String) -> Self {
-        let input = input.trim();
-        let (cmd, rest) = input.split_once(" ").unwrap_or((input, ""));
+        let parsed_input = Parser::parse(&input.trim());
 
         Self {
-            name: cmd.to_string(),
-            args: Parser::parse(rest),
+            name: parsed_input[0].clone(),
+            args: parsed_input[1..].to_vec(),
         }
     }
 
