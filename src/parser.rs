@@ -4,6 +4,7 @@ enum State {
     Delimiter,
     Unquoted,
     SingleQuoted,
+    DoubleQuoted,
 }
 
 impl Parser {
@@ -19,6 +20,7 @@ impl Parser {
                 Delimiter => match next {
                     None => break,
                     Some('\'') => SingleQuoted,
+                    Some('\"') => DoubleQuoted,
                     Some(' ') => Delimiter,
                     Some(c) => {
                         word.push(c);
@@ -33,12 +35,21 @@ impl Parser {
                         SingleQuoted
                     }
                 },
+                DoubleQuoted => match next {
+                    None => panic!("parse error"),
+                    Some('\"') => Unquoted,
+                    Some(c) => {
+                        word.push(c);
+                        DoubleQuoted
+                    }
+                },
                 Unquoted => match next {
                     None => {
                         words.push(std::mem::replace(&mut word, String::new()));
                         break;
                     }
                     Some('\'') => SingleQuoted,
+                    Some('\"') => DoubleQuoted,
                     Some(' ') => {
                         words.push(std::mem::replace(&mut word, String::new()));
                         Delimiter
