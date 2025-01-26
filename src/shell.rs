@@ -1,10 +1,9 @@
 use crate::command::Command;
 use crate::parser::Parser;
+use crate::redirect::Redirect;
 use anyhow::Result;
-use std::fs::File;
 use std::io;
 use std::io::Write;
-use std::path::Path;
 
 pub struct Shell;
 
@@ -50,33 +49,20 @@ fn handle_redir(
     stdout: &mut Box<dyn Write>,
     stderr: &mut Box<dyn Write>,
 ) -> Result<(), String> {
-
     for i in 0..args.len() {
-        if args[i] == ">" || args[i] == "1>" || args[i] == "2>" {
-            // Ensure the redirection file is specified
-            if i + 1 >= args.len() {
-                return Err("Missing redirection file".to_string());
-            }
-
-            let redir_path = Path::new(&args[i + 1]);
-            // Ensure the parent directory exists
-            if let Some(parent) = redir_path.parent() {
-                if !parent.exists() {
-                    return Err("Redirection file parent directory does not exist".to_string());
+        match Redirect::is_redirect(args[i].as_str()) {
+            None => {}
+            Some(redirect) => {
+                let redir_file = redirect.get_file(args.get(i + 1))?;
+                match redirect.is_stdout() {
+                    true => *stdout = Box::new(redir_file),
+                    false => *stderr = Box::new(redir_file),
                 }
+
+                // Remove redirection tokens and the file name
+                args.drain(i..=i + 1);
+                break;
             }
-            let redir_file =
-                File::create(redir_path).map_err(|_| "Failed to create redirection file")?;
-            if args[i] == ">" || args[i] == "1>" {
-                // Redirect stdout
-                *stdout = Box::new(redir_file);
-            } else if args[i] == "2>" {
-                // Redirect stderr
-                *stderr = Box::new(redir_file);
-            }
-            // Remove redirection tokens and the file name
-            args.drain(i..=i + 1);
-            break;
         }
     }
     Ok(())
