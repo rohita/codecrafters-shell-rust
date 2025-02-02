@@ -1,5 +1,5 @@
 use crate::command::Command;
-use crate::parser::Parser;
+use crate::parser::parse;
 use crate::redirect::Redirect;
 use anyhow::Result;
 use std::io;
@@ -24,7 +24,7 @@ impl Shell {
 
             let mut input = String::new();
             stdin.read_line(&mut input)?;
-            let parsed_input = Parser::parse(input.trim());
+            let parsed_input = parse(input.trim());
             let command_name = parsed_input[0].clone();
             let mut args = parsed_input[1..].to_vec();
             if let Some(redirect) =  Redirect::is_redirect(&mut args) {
