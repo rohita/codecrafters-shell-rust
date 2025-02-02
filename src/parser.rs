@@ -2,95 +2,61 @@ use std::mem::take;
 
 pub struct Parser;
 
-enum State {
-    Backslash,
-    Delimiter,
-    Unquoted,
-    SingleQuoted,
-    DoubleQuoted,
-    DoubleQuotedBackslash,
-}
+const SPACE: char = ' ';
+const BACKSLASH: char = '\\';
+const SINGLE_QUOTE: char = '\'';
+const DOUBLE_QUOTE: char = '"';
+const ESCAPABLE_CHARS: [char; 4] = [BACKSLASH, '$', '\n', DOUBLE_QUOTE];
 
 impl Parser {
     pub fn parse(source: &str) -> Vec<String> {
-        use State::*;
-        let mut words = Vec::new();
-        let mut word = String::new();
-        let mut chars = source.chars();
-        let mut state = Delimiter;
-        loop {
-            let next = chars.next();
-            state = match state {
-                Backslash => match next {
+        let mut arguments = Vec::new();
+        let mut current_argument = String::new();
+        let mut chars = source.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            match c {
+                SPACE => if !current_argument.is_empty() {
+                    arguments.push(take(&mut current_argument));
+                },
+                BACKSLASH => match chars.next() {
+                    Some(next) => current_argument.push(next),
                     None => {
-                        word.push('\\');
-                        words.push(take(&mut word));
+                        current_argument.push(BACKSLASH);
                         break;
                     }
-                    Some(c) => {
-                        word.push(c);
-                        Unquoted
+                },
+                SINGLE_QUOTE => {
+                    loop {
+                        match chars.next() {
+                            None => panic!("Unmatched single quote in input"),
+                            Some(SINGLE_QUOTE) => break,
+                            Some(quoted) => current_argument.push(quoted),
+                        }
                     }
                 },
-                Delimiter => match next {
-                    None => break,
-                    Some('\'') => SingleQuoted,
-                    Some('\"') => DoubleQuoted,
-                    Some('\\') => Backslash,
-                    Some(' ') => Delimiter,
-                    Some(c) => {
-                        word.push(c);
-                        Unquoted
+                DOUBLE_QUOTE => {
+                    loop {
+                        match chars.next() {
+                            None => panic!("Unmatched double quote in input"),
+                            Some(DOUBLE_QUOTE) => break,
+                            Some(BACKSLASH) => match chars.peek() {
+                                Some(next) if ESCAPABLE_CHARS.contains(next) => {
+                                    current_argument.push(chars.next().unwrap())
+                                }
+                                _ => current_argument.push(BACKSLASH),
+                            },
+                            Some(quoted) => current_argument.push(quoted),
+                        }
                     }
-                },
-                SingleQuoted => match next {
-                    None => panic!("parse error"),
-                    Some('\'') => Unquoted,
-                    Some(c) => {
-                        word.push(c);
-                        SingleQuoted
-                    }
-                },
-                DoubleQuoted => match next {
-                    None => panic!("parse error"),
-                    Some('\"') => Unquoted,
-                    Some('\\') => DoubleQuotedBackslash,
-                    Some(c) => {
-                        word.push(c);
-                        DoubleQuoted
-                    }
-                },
-                DoubleQuotedBackslash => match next {
-                    None => panic!("parse error"),
-                    Some(c @ '$') | Some(c @ '\n') | Some(c @ '"') | Some(c @ '\\') => {
-                        word.push(c);
-                        DoubleQuoted
-                    }
-                    Some(c) => {
-                        word.push('\\');
-                        word.push(c);
-                        DoubleQuoted
-                    }
-                },
-                Unquoted => match next {
-                    None => {
-                        words.push(take(&mut word));
-                        break;
-                    }
-                    Some('\'') => SingleQuoted,
-                    Some('\"') => DoubleQuoted,
-                    Some('\\') => Backslash,
-                    Some(' ') => {
-                        words.push(take(&mut word));
-                        Delimiter
-                    }
-                    Some(c) => {
-                        word.push(c);
-                        Unquoted
-                    }
-                },
+                }
+                _ => current_argument.push(c),
             }
         }
-        words
+
+        if !current_argument.is_empty() {
+            arguments.push(current_argument);
+        }
+        arguments
     }
 }
