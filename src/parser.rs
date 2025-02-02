@@ -1,4 +1,4 @@
-use std::mem::replace;
+use std::mem::take;
 
 pub struct Parser;
 
@@ -24,7 +24,7 @@ impl Parser {
                 Backslash => match next {
                     None => {
                         word.push('\\');
-                        words.push(replace(&mut word, String::new()));
+                        words.push(take(&mut word));
                         break;
                     }
                     Some(c) => {
@@ -74,14 +74,14 @@ impl Parser {
                 },
                 Unquoted => match next {
                     None => {
-                        words.push(replace(&mut word, String::new()));
+                        words.push(take(&mut word));
                         break;
                     }
                     Some('\'') => SingleQuoted,
                     Some('\"') => DoubleQuoted,
                     Some('\\') => Backslash,
                     Some(' ') => {
-                        words.push(replace(&mut word, String::new()));
+                        words.push(take(&mut word));
                         Delimiter
                     }
                     Some(c) => {

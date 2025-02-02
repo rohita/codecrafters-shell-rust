@@ -25,13 +25,13 @@ impl Builtin {
         }
     }
 
-    pub fn exec(&self, args: &Vec<String>) -> Result<Vec<u8>> {
+    pub fn exec(&self, args: &[String]) -> Result<Vec<u8>> {
         let mut return_val = match self {
             Echo => args.join(" "),
             Exit => {
-                match args.len() > 0 {
-                    true => exit(args[0].parse().unwrap_or(0)),
-                    false => exit(0)
+                match args.is_empty() {
+                    false => exit(args[0].parse().unwrap_or(0)),
+                    true => exit(0)
                 }
             },
             Type => {
@@ -56,7 +56,7 @@ impl Builtin {
         };
 
         if !return_val.is_empty() {
-            return_val.push_str("\n");
+            return_val.push('\n');
         }
 
         Ok(return_val.into_bytes())

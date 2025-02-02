@@ -24,46 +24,21 @@ impl Shell {
 
             let mut input = String::new();
             stdin.read_line(&mut input)?;
-            let parsed_input = Parser::parse(&input.trim());
+            let parsed_input = Parser::parse(input.trim());
             let command_name = parsed_input[0].clone();
             let mut args = parsed_input[1..].to_vec();
-            match handle_redir(&mut args, &mut stdout, &mut stderr) {
-                Ok(()) => {}
-                Err(err) => {
-                    writeln!(stderr, "Failed to handle redirection: {}", err)?;
-                    continue;
+            if let Some(redirect) =  Redirect::is_redirect(&mut args) {
+                match redirect.is_stdout {
+                    true => stdout = Box::new(redirect.file),
+                    false => stderr = Box::new(redirect.file),
                 }
             }
 
             let result = Command::new(command_name, args).exec()?;
-            stdout.write(&result.stdout)?;
-            stderr.write(&result.stderr)?;
+            stdout.write_all(&result.stdout)?;
+            stderr.write_all(&result.stderr)?;
             stdout.flush()?;
             stderr.flush()?;
         }
     }
-}
-
-fn handle_redir(
-    args: &mut Vec<String>,
-    stdout: &mut Box<dyn Write>,
-    stderr: &mut Box<dyn Write>,
-) -> Result<(), String> {
-    for i in 0..args.len() {
-        match Redirect::is_redirect(args[i].as_str()) {
-            None => {}
-            Some(redirect) => {
-                let redir_file = redirect.get_file(args.get(i + 1))?;
-                match redirect.is_stdout() {
-                    true => *stdout = Box::new(redir_file),
-                    false => *stderr = Box::new(redir_file),
-                }
-
-                // Remove redirection tokens and the file name
-                args.drain(i..=i + 1);
-                break;
-            }
-        }
-    }
-    Ok(())
 }
