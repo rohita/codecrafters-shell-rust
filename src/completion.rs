@@ -1,3 +1,4 @@
+use std::{env, fs};
 use crate::builtin::Builtin;
 use crate::trie::Trie;
 use anyhow::{Result, Context};
@@ -13,11 +14,7 @@ pub struct Completer {
 
 impl Completer {
     pub fn new() -> Self {
-        let mut search_idx = Trie::new();
-        Builtin::variants_as_lowercase()
-            .iter()
-            .for_each(|word| search_idx.insert(word));
-        Self { search_idx }
+        Self { search_idx: Self::build_search_index() }
     }
 
     pub fn capture_input(&self) -> Result<String> {
@@ -54,5 +51,28 @@ impl Completer {
         }
 
         Ok(input)
+    }
+
+    fn build_search_index() -> Trie {
+        let mut search_idx = Trie::new();
+        for executable in Self::get_executables() {
+            search_idx.insert(&executable);
+        }
+        for builtin in Builtin::variants_as_lowercase() {
+            search_idx.insert(&builtin);
+        }
+        search_idx
+    }
+
+    pub fn get_executables() -> Vec<String> {
+        let path = env::var("PATH").unwrap();
+        let path_directories = env::split_paths(&path);
+
+        path_directories
+            .filter_map(|path| fs::read_dir(path).ok())
+            .flat_map(|directory| directory.filter_map(|entry| entry.ok()))
+            .filter(|entry| entry.metadata().map(|m| m.is_file()).unwrap_or(false))
+            .filter_map(|entry| entry.file_name().into_string().ok())
+            .collect()
     }
 }
