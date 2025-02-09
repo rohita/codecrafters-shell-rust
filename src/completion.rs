@@ -33,13 +33,12 @@ impl Completer {
 
             match c {
                 TAB => {
-                    if input.is_empty() {
-                        continue;
-                    }
                     let suggestions = self.search_idx.search(&input);
                     if !suggestions.is_empty() {
                         write!(stdout, "\r$ {} ", suggestions[0])?;
                         input = format!("{} ", suggestions[0]);
+                    } else {
+                        write!(stdout, "\x07")?;
                     }
                 }
                 NEWLINE => {
