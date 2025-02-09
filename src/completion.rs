@@ -23,6 +23,7 @@ impl Completer {
         let mut buffer = [0; 1];
         let stdin = io::stdin();
         let mut handle = stdin.lock();
+        let mut double_tab = false;
 
         loop {
             handle.read_exact(&mut buffer).context("Failed to read input")?;
@@ -30,12 +31,23 @@ impl Completer {
 
             match c {
                 TAB => {
-                    let suggestions = self.search_idx.search(&input);
-                    if !suggestions.is_empty() {
-                        write!(stdout, "\r$ {} ", suggestions[0])?;
-                        input = format!("{} ", suggestions[0]);
-                    } else {
-                        write!(stdout, "\x07")?;
+                    let mut suggestions = self.search_idx.search(&input);
+                    suggestions.sort();
+                    match suggestions.len() {
+                        0 => {
+                            write!(stdout, "\x07")?;
+                        }
+                        1 => {
+                            write!(stdout, "\r$ {} ", suggestions[0])?;
+                            input = format!("{} ", suggestions[0]);
+                        }
+                        _ => {
+                            match double_tab {
+                                true => write!(stdout, "\r\n{}\r\n$ {}", suggestions.join("  "), input)?,
+                                false => write!(stdout, "\x07")?
+                            }
+                            double_tab = !double_tab;
+                        }
                     }
                 }
                 NEWLINE => {
