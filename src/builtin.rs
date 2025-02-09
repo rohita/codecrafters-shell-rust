@@ -1,10 +1,13 @@
-use std::env;
-use std::path::Path;
 use crate::builtin::Builtin::*;
 use anyhow::Result;
 use pathsearch::find_executable_in_path;
+use std::env;
+use std::path::Path;
 use std::process::exit;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
+#[derive(Debug, EnumIter)]
 pub enum Builtin {
     Echo,
     Exit,
@@ -14,6 +17,10 @@ pub enum Builtin {
 }
 
 impl Builtin {
+    pub(crate) fn variants_as_lowercase() -> Vec<String> {
+        Builtin::iter().map(|variant| format!("{:?}", variant).to_lowercase()).collect()
+    }
+
     pub fn is_builtin(name: &str) -> Option<Builtin> {
         match name {
             "echo" => Some(Echo),

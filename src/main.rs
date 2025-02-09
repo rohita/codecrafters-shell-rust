@@ -3,6 +3,8 @@ mod command;
 mod shell;
 mod parser;
 mod redirect;
+mod trie;
+mod completion;
 
 use crate::shell::Shell;
 use anyhow::Result;
