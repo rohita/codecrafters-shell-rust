@@ -50,3 +50,22 @@ impl Trie {
         }
     }
 }
+
+pub fn longest_common_prefix(suggestions: &Vec<String>) -> String {
+    if suggestions.is_empty() {
+        return String::new();
+    }
+
+    let mut prefix = suggestions[0].clone();
+    for s in suggestions.iter() {
+        // Repeatedly remove the last character from the prefix
+        // until current string starts with the prefix.
+        while !s.starts_with(&prefix) {
+            if prefix.is_empty() {
+                break;
+            }
+            prefix.pop(); // Shorten the prefix
+        }
+    }
+    prefix
+}

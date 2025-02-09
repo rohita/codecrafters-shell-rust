@@ -1,6 +1,6 @@
 use std::{env, fs};
 use crate::builtin::Builtin;
-use crate::trie::Trie;
+use crate::trie::{longest_common_prefix, Trie};
 use anyhow::{Result, Context};
 use std::io::{self, Read, Write};
 use termion::raw::IntoRawMode;
@@ -14,7 +14,7 @@ pub struct Completer {
 
 impl Completer {
     pub fn new() -> Self {
-        Self { search_idx: Self::build_search_index() }
+        Self { search_idx: build_search_index() }
     }
 
     pub fn capture_input(&self) -> Result<String> {
@@ -26,6 +26,7 @@ impl Completer {
         let mut double_tab = false;
 
         loop {
+            stdout.flush()?;
             handle.read_exact(&mut buffer).context("Failed to read input")?;
             let c = buffer[0] as char;
 
@@ -33,6 +34,16 @@ impl Completer {
                 TAB => {
                     let mut suggestions = self.search_idx.search(&input);
                     suggestions.sort();
+                    let mut lcp = longest_common_prefix(&suggestions);
+                    if lcp.len() > input.len() {
+                        if suggestions.len() == 1 {
+                            lcp.push(' ');
+                        }
+                        write!(stdout, "\r$ {}", lcp)?;
+                        input = lcp;
+                        continue;
+                    }
+
                     match suggestions.len() {
                         0 => {
                             write!(stdout, "\x07")?;
@@ -59,32 +70,31 @@ impl Completer {
                     input.push(c);
                 }
             }
-            stdout.flush()?;
         }
 
         Ok(input)
     }
+}
 
-    fn build_search_index() -> Trie {
-        let mut search_idx = Trie::new();
-        for executable in Self::get_executables() {
-            search_idx.insert(&executable);
-        }
-        for builtin in Builtin::variants_as_lowercase() {
-            search_idx.insert(&builtin);
-        }
-        search_idx
+fn build_search_index() -> Trie {
+    let mut search_idx = Trie::new();
+    for executable in get_executables() {
+        search_idx.insert(&executable);
     }
-
-    pub fn get_executables() -> Vec<String> {
-        let path = env::var("PATH").unwrap();
-        let path_directories = env::split_paths(&path);
-
-        path_directories
-            .filter_map(|path| fs::read_dir(path).ok())
-            .flat_map(|directory| directory.filter_map(|entry| entry.ok()))
-            .filter(|entry| entry.metadata().map(|m| m.is_file()).unwrap_or(false))
-            .filter_map(|entry| entry.file_name().into_string().ok())
-            .collect()
+    for builtin in Builtin::variants_as_lowercase() {
+        search_idx.insert(&builtin);
     }
+    search_idx
+}
+
+fn get_executables() -> Vec<String> {
+    let path = env::var("PATH").unwrap();
+    let path_directories = env::split_paths(&path);
+
+    path_directories
+        .filter_map(|path| fs::read_dir(path).ok())
+        .flat_map(|directory| directory.filter_map(|entry| entry.ok()))
+        .filter(|entry| entry.metadata().map(|m| m.is_file()).unwrap_or(false))
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .collect()
 }
